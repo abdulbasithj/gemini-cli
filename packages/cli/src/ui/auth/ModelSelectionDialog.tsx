@@ -134,15 +134,19 @@ export function ModelSelectionDialog({
     // Extract provider from model label if showing all providers
     let selectedProvider = provider;
     if (showAllProviders) {
-      if (GEMINI_MODELS.includes(model as string)) {
+      if (GEMINI_MODELS.includes(model as (typeof GEMINI_MODELS)[number])) {
         selectedProvider = 'gemini';
-      } else if (OPENAI_MODELS.includes(model as string)) {
+      } else if (
+        OPENAI_MODELS.includes(model as (typeof OPENAI_MODELS)[number])
+      ) {
         selectedProvider = 'openai';
-      } else if (CLAUDE_MODELS.includes(model as string)) {
+      } else if (
+        CLAUDE_MODELS.includes(model as (typeof CLAUDE_MODELS)[number])
+      ) {
         selectedProvider = 'claude';
       }
     }
-    onSelect(model, selectedProvider);
+    onSelect(model as string, selectedProvider);
   };
 
   return (

@@ -43,16 +43,22 @@ export class ClaudeContentGenerator implements ContentGenerator {
 
     try {
       const messages = convertToClaudeMessages(request);
-      const config = (request as Record<string, unknown>).config || {};
+      const config =
+        ((request as unknown as Record<string, unknown>)['config'] as Record<
+          string,
+          unknown
+        >) || {};
 
       const response = await this.client.messages.create({
         model: this.model,
-        max_tokens: config.maxOutputTokens || 4096,
+        max_tokens: (config['maxOutputTokens'] as number) || 4096,
         messages,
       });
 
       debugLogger.log(`[Claude] Response received: ${response.stop_reason}`);
-      return convertClaudeResponse(response);
+      return convertClaudeResponse(
+        response as unknown as Record<string, unknown>,
+      );
     } catch (error) {
       debugLogger.error('[Claude] Error in generateContent:', error);
       throw new Error(
@@ -71,11 +77,15 @@ export class ClaudeContentGenerator implements ContentGenerator {
 
     try {
       const messages = convertToClaudeMessages(request);
-      const config = (request as Record<string, unknown>).config || {};
+      const config =
+        ((request as unknown as Record<string, unknown>)['config'] as Record<
+          string,
+          unknown
+        >) || {};
 
       const stream = this.client.messages.stream({
         model: this.model,
-        max_tokens: config.maxOutputTokens || 4096,
+        max_tokens: (config['maxOutputTokens'] as number) || 4096,
         messages,
       });
 
@@ -89,15 +99,20 @@ export class ClaudeContentGenerator implements ContentGenerator {
   }
 
   private async *streamClaudeResponses(
-    stream: AsyncIterable<Record<string, unknown>>,
+    stream: AsyncIterable<unknown>,
   ): AsyncGenerator<GenerateContentResponse> {
     let currentText = '';
 
     for await (const event of stream) {
-      if (event.type === 'content_block_delta') {
-        const delta = event.delta;
-        if (delta.type === 'text_delta') {
-          currentText += delta.text;
+      if (
+        (event as Record<string, unknown>)['type'] === 'content_block_delta'
+      ) {
+        const delta = (event as Record<string, unknown>)['delta'] as Record<
+          string,
+          unknown
+        >;
+        if (delta['type'] === 'text_delta') {
+          currentText += String(delta['text']);
           yield {
             candidates: [
               {
@@ -122,9 +137,15 @@ export class ClaudeContentGenerator implements ContentGenerator {
       const messages = convertToClaudeMessages(request);
 
       // Use the count_tokens method on the model
-      const response = (await (
-        this.client as Record<string, unknown>
-      ).beta.messages.countTokens(
+      const clientRecord = this.client as unknown as Record<
+        string,
+        Record<string, Record<string, (...args: unknown[]) => unknown>>
+      >;
+      const responseObj = await (
+        clientRecord['beta']['messages']['countTokens'] as (
+          ...args: unknown[]
+        ) => unknown
+      )(
         {
           model: this.model,
           messages,
@@ -134,11 +155,12 @@ export class ClaudeContentGenerator implements ContentGenerator {
             'anthropic-beta': 'token-counting-2025-11-01',
           },
         },
-      )) as Record<string, number>;
+      );
+      const response = responseObj as Record<string, unknown>;
 
-      debugLogger.log(`[Claude] Token count: ${response.input_tokens}`);
+      debugLogger.log(`[Claude] Token count: ${response['input_tokens']}`);
       return {
-        totalTokens: response.input_tokens,
+        totalTokens: response['input_tokens'] as number,
       };
     } catch (error) {
       debugLogger.error('[Claude] Error in countTokens:', error);

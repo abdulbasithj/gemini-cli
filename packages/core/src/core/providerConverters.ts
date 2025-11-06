@@ -30,7 +30,7 @@ export function convertToOpenAIMessages(
         // Determine role - if content has 'role' property, use it
         const role =
           typeof content === 'object' && 'role' in content
-            ? (content as Record<string, unknown>).role === 'model'
+            ? (content as Record<string, unknown>)['role'] === 'model'
               ? 'assistant'
               : 'user'
             : 'user';
@@ -59,8 +59,8 @@ function extractTextFromContent(content: unknown): string {
   const contentObj = content as Record<string, unknown>;
 
   // Handle content with parts array
-  if (Array.isArray(contentObj.parts)) {
-    return (contentObj.parts as unknown[])
+  if (Array.isArray(contentObj['parts'])) {
+    return (contentObj['parts'] as unknown[])
       .map((p: unknown) => {
         if (typeof p === 'string') return p;
         if (
@@ -68,15 +68,15 @@ function extractTextFromContent(content: unknown): string {
           typeof p === 'object' &&
           'text' in (p as Record<string, unknown>)
         )
-          return String((p as Record<string, unknown>).text);
+          return String((p as Record<string, unknown>)['text']);
         return '';
       })
       .join('');
   }
 
   // Handle direct text property
-  if (typeof contentObj.text === 'string') {
-    return contentObj.text;
+  if (typeof contentObj['text'] === 'string') {
+    return contentObj['text'] as string;
   }
 
   return '';
@@ -88,9 +88,10 @@ function extractTextFromContent(content: unknown): string {
 export function convertOpenAIResponse(
   response: Record<string, unknown>, // OpenAI ChatCompletion response
 ): GenerateContentResponse {
-  const choice = (response.choices as Array<Record<string, unknown>>)?.[0];
+  const choice = (response['choices'] as Array<Record<string, unknown>>)?.[0];
   const text =
-    ((choice?.message as Record<string, unknown>)?.content as string) || '';
+    ((choice?.['message'] as Record<string, unknown>)?.['content'] as string) ||
+    '';
 
   return {
     candidates: [
@@ -124,7 +125,7 @@ export function convertToClaudeMessages(
         const role =
           typeof content === 'object' &&
           'role' in (content as Record<string, unknown>)
-            ? (content as Record<string, unknown>).role === 'model'
+            ? (content as Record<string, unknown>)['role'] === 'model'
               ? 'assistant'
               : 'user'
             : 'user';
@@ -146,10 +147,11 @@ export function convertToClaudeMessages(
 export function convertClaudeResponse(
   response: Record<string, unknown>, // Anthropic Message response
 ): GenerateContentResponse {
-  const content = response.content as
+  const content = response['content'] as
     | Array<Record<string, unknown>>
     | undefined;
-  const text = content?.[0]?.type === 'text' ? String(content[0].text) : '';
+  const text =
+    content?.[0]?.['type'] === 'text' ? String(content[0]['text']) : '';
 
   return {
     candidates: [

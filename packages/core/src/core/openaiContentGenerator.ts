@@ -43,20 +43,26 @@ export class OpenAIContentGenerator implements ContentGenerator {
 
     try {
       const messages = convertToOpenAIMessages(request);
-      const config = (request as Record<string, unknown>).config || {};
+      const config =
+        ((request as unknown as Record<string, unknown>)['config'] as Record<
+          string,
+          unknown
+        >) || {};
 
       const response = await this.client.chat.completions.create({
         model: this.model,
         messages,
-        max_tokens: config.maxOutputTokens || 4096,
-        temperature: config.temperature,
-        top_p: config.topP,
+        max_tokens: (config['maxOutputTokens'] as number) || 4096,
+        temperature: config['temperature'] as number,
+        top_p: config['topP'] as number,
       });
 
       debugLogger.log(
         `[OpenAI] Response received: ${response.choices?.[0]?.finish_reason}`,
       );
-      return convertOpenAIResponse(response);
+      return convertOpenAIResponse(
+        response as unknown as Record<string, unknown>,
+      );
     } catch (error) {
       debugLogger.error('[OpenAI] Error in generateContent:', error);
       throw new Error(
@@ -75,14 +81,18 @@ export class OpenAIContentGenerator implements ContentGenerator {
 
     try {
       const messages = convertToOpenAIMessages(request);
-      const config = (request as Record<string, unknown>).config || {};
+      const config =
+        ((request as unknown as Record<string, unknown>)['config'] as Record<
+          string,
+          unknown
+        >) || {};
 
       const stream = await this.client.chat.completions.create({
         model: this.model,
         messages,
-        max_tokens: config.maxOutputTokens || 4096,
-        temperature: config.temperature,
-        top_p: config.topP,
+        max_tokens: (config['maxOutputTokens'] as number) || 4096,
+        temperature: config['temperature'] as number,
+        top_p: config['topP'] as number,
         stream: true,
       });
 
@@ -96,14 +106,20 @@ export class OpenAIContentGenerator implements ContentGenerator {
   }
 
   private async *streamOpenAIResponses(
-    stream: AsyncIterable<Record<string, unknown>>,
+    stream: AsyncIterable<unknown>,
   ): AsyncGenerator<GenerateContentResponse> {
     let currentText = '';
 
     for await (const chunk of stream) {
-      const delta = chunk.choices?.[0]?.delta?.content;
+      const chunkRecord = chunk as unknown as Record<string, unknown>;
+      const choices = chunkRecord['choices'] as
+        | Array<Record<string, unknown>>
+        | undefined;
+      const delta = (choices?.[0]?.['delta'] as Record<string, unknown>)?.[
+        'content'
+      ];
       if (delta) {
-        currentText += delta;
+        currentText += String(delta);
         yield {
           candidates: [
             {
@@ -148,36 +164,36 @@ export class OpenAIContentGenerator implements ContentGenerator {
     debugLogger.log('[OpenAI] embedContent called');
 
     try {
-      const requestRecord = request as Record<string, unknown>;
-      const content = requestRecord.contents || requestRecord.content;
+      const requestRecord = request as unknown as Record<string, unknown>;
+      const content = requestRecord['contents'] || requestRecord['content'];
       let text = '';
 
       if (typeof content === 'string') {
         text = content;
       } else if (Array.isArray(content)) {
-        text = content
+        text = (content as unknown[])
           .map((p: unknown) =>
             typeof p === 'string'
               ? p
-              : (p as Record<string, unknown>).text
-                ? (p as Record<string, unknown>).text
+              : (p as Record<string, unknown>)['text']
+                ? (p as Record<string, unknown>)['text']
                 : '',
           )
           .join('');
       } else if (content && typeof content === 'object') {
         const contentObj = content as Record<string, unknown>;
-        if (Array.isArray(contentObj.parts)) {
-          text = (contentObj.parts as unknown[])
+        if (Array.isArray(contentObj['parts'])) {
+          text = (contentObj['parts'] as unknown[])
             .map((p: unknown) =>
               typeof p === 'string'
                 ? p
-                : (p as Record<string, unknown>).text
-                  ? (p as Record<string, unknown>).text
+                : (p as Record<string, unknown>)['text']
+                  ? (p as Record<string, unknown>)['text']
                   : '',
             )
             .join('');
         } else if ('text' in contentObj) {
-          text = String(contentObj.text);
+          text = String(contentObj['text']);
         }
       }
 
