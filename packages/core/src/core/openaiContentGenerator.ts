@@ -14,6 +14,7 @@ import type {
 } from '@google/genai';
 import OpenAI from 'openai';
 import { debugLogger } from '../utils/debugLogger.js';
+import { DEFAULT_OPENAI_MODEL } from '../config/models.js';
 import type { ContentGenerator } from './contentGenerator.js';
 import {
   convertToOpenAIMessages,
@@ -28,7 +29,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
   private client: OpenAI;
   private model: string;
 
-  constructor(apiKey: string, model: string = 'gpt-4-turbo') {
+  constructor(apiKey: string, model: string = DEFAULT_OPENAI_MODEL) {
     this.client = new OpenAI({ apiKey });
     this.model = model;
   }

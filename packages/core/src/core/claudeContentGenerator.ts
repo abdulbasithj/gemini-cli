@@ -14,6 +14,7 @@ import type {
 } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
 import { debugLogger } from '../utils/debugLogger.js';
+import { DEFAULT_CLAUDE_MODEL } from '../config/models.js';
 import type { ContentGenerator } from './contentGenerator.js';
 import {
   convertToClaudeMessages,
@@ -28,7 +29,7 @@ export class ClaudeContentGenerator implements ContentGenerator {
   private client: Anthropic;
   private model: string;
 
-  constructor(apiKey: string, model: string = 'claude-3-5-sonnet-20241022') {
+  constructor(apiKey: string, model: string = DEFAULT_CLAUDE_MODEL) {
     this.client = new Anthropic({ apiKey });
     this.model = model;
   }
