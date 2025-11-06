@@ -102,8 +102,6 @@ export class ClaudeContentGenerator implements ContentGenerator {
   private async *streamClaudeResponses(
     stream: AsyncIterable<unknown>,
   ): AsyncGenerator<GenerateContentResponse> {
-    let currentText = '';
-
     for await (const event of stream) {
       if (
         (event as Record<string, unknown>)['type'] === 'content_block_delta'
@@ -113,12 +111,12 @@ export class ClaudeContentGenerator implements ContentGenerator {
           unknown
         >;
         if (delta['type'] === 'text_delta') {
-          currentText += String(delta['text']);
+          const text = String(delta['text']);
           yield {
             candidates: [
               {
                 content: {
-                  parts: [{ text: currentText }],
+                  parts: [{ text }],
                   role: 'model',
                 },
               },
