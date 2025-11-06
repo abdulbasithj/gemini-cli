@@ -16,6 +16,10 @@ import { GoogleGenAI } from '@google/genai';
 import { createCodeAssistContentGenerator } from '../code_assist/codeAssist.js';
 import type { Config } from '../config/config.js';
 import { loadApiKey } from './apiKeyCredentialStorage.js';
+import {
+  DEFAULT_OPENAI_MODEL,
+  DEFAULT_CLAUDE_MODEL,
+} from '../config/models.js';
 
 import type { UserTierId } from '../code_assist/types.js';
 import { LoggingContentGenerator } from './loggingContentGenerator.js';
@@ -166,7 +170,7 @@ export async function createContentGenerator(
 
     // Handle OpenAI
     if (config.authType === AuthType.USE_OPENAI && config.apiKey) {
-      const model = config.model || 'gpt-4-turbo';
+      const model = config.model || DEFAULT_OPENAI_MODEL;
       return new LoggingContentGenerator(
         new OpenAIContentGenerator(config.apiKey, model),
         gcConfig,
@@ -175,7 +179,7 @@ export async function createContentGenerator(
 
     // Handle Claude
     if (config.authType === AuthType.USE_CLAUDE && config.apiKey) {
-      const model = config.model || 'claude-3-5-sonnet-20241022';
+      const model = config.model || DEFAULT_CLAUDE_MODEL;
       return new LoggingContentGenerator(
         new ClaudeContentGenerator(config.apiKey, model),
         gcConfig,
