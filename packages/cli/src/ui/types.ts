@@ -25,6 +25,8 @@ export enum AuthState {
   Updating = 'updating',
   // Waiting for user to input API key
   AwaitingApiKeyInput = 'awaiting_api_key_input',
+  // Waiting for user to select a model for the provider
+  SelectingModel = 'selecting_model',
   // Successfully authenticated
   Authenticated = 'authenticated',
 }

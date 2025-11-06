@@ -61,9 +61,24 @@ export function AuthDialog({
       key: AuthType.USE_GEMINI,
     },
     {
+      label: 'Use OpenAI API Key',
+      value: AuthType.USE_OPENAI,
+      key: AuthType.USE_OPENAI,
+    },
+    {
+      label: 'Use Claude API Key',
+      value: AuthType.USE_CLAUDE,
+      key: AuthType.USE_CLAUDE,
+    },
+    {
       label: 'Vertex AI',
       value: AuthType.USE_VERTEX_AI,
       key: AuthType.USE_VERTEX_AI,
+    },
+    {
+      label: 'Custom Auth (with fallback to API keys)',
+      value: AuthType.CUSTOM_AUTH,
+      key: AuthType.CUSTOM_AUTH,
     },
   ];
 
@@ -122,7 +137,11 @@ Logging in with Google... Please restart Gemini CLI to continue.
           process.exit(0);
         }
       }
-      if (authType === AuthType.USE_GEMINI) {
+      if (
+        authType === AuthType.USE_GEMINI ||
+        authType === AuthType.USE_OPENAI ||
+        authType === AuthType.USE_CLAUDE
+      ) {
         setAuthState(AuthState.AwaitingApiKeyInput);
         return;
       }

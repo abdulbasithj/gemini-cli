@@ -677,6 +677,20 @@ const SETTINGS_SCHEMA = {
         description: 'Skip the next speaker check.',
         showInDialog: true,
       },
+      providerModels: {
+        type: 'object',
+        label: 'Provider Models',
+        category: 'Model',
+        requiresRestart: false,
+        default: {} as Record<string, string>,
+        description:
+          'Stores the selected model for each provider (gemini, openai, claude).',
+        showInDialog: false,
+        additionalProperties: {
+          type: 'string',
+          description: 'Model name for a specific provider',
+        },
+      },
     },
   },
 

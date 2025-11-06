@@ -22,6 +22,8 @@ import { LoggingContentGenerator } from './loggingContentGenerator.js';
 import { InstallationManager } from '../utils/installationManager.js';
 import { FakeContentGenerator } from './fakeContentGenerator.js';
 import { RecordingContentGenerator } from './recordingContentGenerator.js';
+import { OpenAIContentGenerator } from './openaiContentGenerator.js';
+import { ClaudeContentGenerator } from './claudeContentGenerator.js';
 
 /**
  * Interface abstracting the core functionalities for generating content and counting tokens.
@@ -49,6 +51,9 @@ export enum AuthType {
   USE_GEMINI = 'gemini-api-key',
   USE_VERTEX_AI = 'vertex-ai',
   CLOUD_SHELL = 'cloud-shell',
+  CUSTOM_AUTH = 'custom-auth',
+  USE_OPENAI = 'openai-api-key',
+  USE_CLAUDE = 'claude-api-key',
 }
 
 export type ContentGeneratorConfig = {
@@ -56,6 +61,8 @@ export type ContentGeneratorConfig = {
   vertexai?: boolean;
   authType?: AuthType;
   proxy?: string;
+  provider?: 'gemini' | 'openai' | 'claude';
+  model?: string;
 };
 
 export async function createContentGeneratorConfig(
@@ -63,7 +70,11 @@ export async function createContentGeneratorConfig(
   authType: AuthType | undefined,
 ): Promise<ContentGeneratorConfig> {
   const geminiApiKey =
-    (await loadApiKey()) || process.env['GEMINI_API_KEY'] || undefined;
+    (await loadApiKey('gemini')) || process.env['GEMINI_API_KEY'] || undefined;
+  const openaiApiKey =
+    (await loadApiKey('openai')) || process.env['OPENAI_API_KEY'] || undefined;
+  const claudeApiKey =
+    (await loadApiKey('claude')) || process.env['CLAUDE_API_KEY'] || undefined;
   const googleApiKey = process.env['GOOGLE_API_KEY'] || undefined;
   const googleCloudProject =
     process.env['GOOGLE_CLOUD_PROJECT'] ||
@@ -84,9 +95,27 @@ export async function createContentGeneratorConfig(
     return contentGeneratorConfig;
   }
 
-  if (authType === AuthType.USE_GEMINI && geminiApiKey) {
+  if (
+    (authType === AuthType.USE_GEMINI || authType === AuthType.CUSTOM_AUTH) &&
+    geminiApiKey
+  ) {
     contentGeneratorConfig.apiKey = geminiApiKey;
     contentGeneratorConfig.vertexai = false;
+    contentGeneratorConfig.provider = 'gemini';
+
+    return contentGeneratorConfig;
+  }
+
+  if (authType === AuthType.USE_OPENAI && openaiApiKey) {
+    contentGeneratorConfig.apiKey = openaiApiKey;
+    contentGeneratorConfig.provider = 'openai';
+
+    return contentGeneratorConfig;
+  }
+
+  if (authType === AuthType.USE_CLAUDE && claudeApiKey) {
+    contentGeneratorConfig.apiKey = claudeApiKey;
+    contentGeneratorConfig.provider = 'claude';
 
     return contentGeneratorConfig;
   }
@@ -97,6 +126,7 @@ export async function createContentGeneratorConfig(
   ) {
     contentGeneratorConfig.apiKey = googleApiKey;
     contentGeneratorConfig.vertexai = true;
+    contentGeneratorConfig.provider = 'gemini';
 
     return contentGeneratorConfig;
   }
@@ -134,9 +164,28 @@ export async function createContentGenerator(
       );
     }
 
+    // Handle OpenAI
+    if (config.authType === AuthType.USE_OPENAI && config.apiKey) {
+      const model = config.model || 'gpt-4-turbo';
+      return new LoggingContentGenerator(
+        new OpenAIContentGenerator(config.apiKey, model),
+        gcConfig,
+      );
+    }
+
+    // Handle Claude
+    if (config.authType === AuthType.USE_CLAUDE && config.apiKey) {
+      const model = config.model || 'claude-3-5-sonnet-20241022';
+      return new LoggingContentGenerator(
+        new ClaudeContentGenerator(config.apiKey, model),
+        gcConfig,
+      );
+    }
+
     if (
       config.authType === AuthType.USE_GEMINI ||
-      config.authType === AuthType.USE_VERTEX_AI
+      config.authType === AuthType.USE_VERTEX_AI ||
+      config.authType === AuthType.CUSTOM_AUTH
     ) {
       let headers: Record<string, string> = { ...baseHeaders };
       if (gcConfig?.getUsageStatisticsEnabled()) {

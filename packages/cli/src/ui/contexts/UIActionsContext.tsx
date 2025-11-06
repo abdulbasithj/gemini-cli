@@ -45,6 +45,10 @@ export interface UIActions {
   popAllMessages: (onPop: (messages: string | undefined) => void) => void;
   handleApiKeySubmit: (apiKey: string) => Promise<void>;
   handleApiKeyCancel: () => void;
+  handleModelSelection: (model: string) => Promise<void>;
+  handleModelSelectionCancel: () => void;
+  handleProviderSelection: (provider: 'gemini' | 'openai' | 'claude') => void;
+  handleProviderSelectionCancel: () => void;
 }
 
 export const UIActionsContext = createContext<UIActions | null>(null);
