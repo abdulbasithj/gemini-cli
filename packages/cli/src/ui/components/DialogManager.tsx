@@ -20,6 +20,8 @@ import { PrivacyNotice } from '../privacy/PrivacyNotice.js';
 import { ProQuotaDialog } from './ProQuotaDialog.js';
 import { PermissionsModifyTrustDialog } from './PermissionsModifyTrustDialog.js';
 import { ModelDialog } from './ModelDialog.js';
+import { ModelSelectionDialog } from '../auth/ModelSelectionDialog.js';
+import { ProviderSelectionDialog } from '../auth/ProviderSelectionDialog.js';
 import { theme } from '../semantic-colors.js';
 import { useUIState } from '../contexts/UIStateContext.js';
 import { useUIActions } from '../contexts/UIActionsContext.js';
@@ -151,6 +153,30 @@ export const DialogManager = ({
       />
     );
   }
+  if (uiState.isSelectingProvider) {
+    return (
+      <Box flexDirection="column">
+        <ProviderSelectionDialog
+          onSelect={uiActions.handleProviderSelection}
+          onCancel={uiActions.handleProviderSelectionCancel}
+        />
+      </Box>
+    );
+  }
+  if (uiState.isSelectingModel) {
+    return (
+      <Box flexDirection="column">
+        <ModelSelectionDialog
+          provider={uiState.apiKeyProvider || 'gemini'}
+          onSelect={uiActions.handleModelSelection}
+          onCancel={uiActions.handleModelSelectionCancel}
+          showAllProviders={
+            uiState.isInCustomAuthFlow || uiState.isCustomAuth || false
+          }
+        />
+      </Box>
+    );
+  }
   if (uiState.isAwaitingApiKeyInput) {
     return (
       <Box flexDirection="column">
@@ -159,6 +185,7 @@ export const DialogManager = ({
           onCancel={uiActions.handleApiKeyCancel}
           error={uiState.authError}
           defaultValue={uiState.apiKeyDefaultValue}
+          provider={uiState.apiKeyProvider || 'gemini'}
         />
       </Box>
     );

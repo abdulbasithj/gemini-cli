@@ -48,7 +48,12 @@ export interface UIState {
   authError: string | null;
   isAuthDialogOpen: boolean;
   isAwaitingApiKeyInput: boolean;
+  isSelectingModel: boolean;
+  isSelectingProvider: boolean;
   apiKeyDefaultValue?: string;
+  apiKeyProvider?: 'gemini' | 'openai' | 'claude';
+  isCustomAuth?: boolean;
+  isInCustomAuthFlow?: boolean;
   editorError: string | null;
   isEditorDialogOpen: boolean;
   showPrivacyNotice: boolean;

@@ -12,19 +12,26 @@ import {
   DEFAULT_GEMINI_FLASH_MODEL,
   DEFAULT_GEMINI_MODEL,
   DEFAULT_GEMINI_MODEL_AUTO,
+  DEFAULT_OPENAI_MODEL,
+  DEFAULT_CLAUDE_MODEL,
+  OPENAI_MODELS,
+  CLAUDE_MODELS,
+  GEMINI_MODELS,
   ModelSlashCommandEvent,
   logModelSlashCommand,
+  AuthType,
 } from '@google/gemini-cli-core';
 import { useKeypress } from '../hooks/useKeypress.js';
 import { theme } from '../semantic-colors.js';
 import { DescriptiveRadioButtonSelect } from './shared/DescriptiveRadioButtonSelect.js';
 import { ConfigContext } from '../contexts/ConfigContext.js';
+import { useSettings } from '../contexts/SettingsContext.js';
 
 interface ModelDialogProps {
   onClose: () => void;
 }
 
-const MODEL_OPTIONS = [
+const GEMINI_MODEL_OPTIONS = [
   {
     value: DEFAULT_GEMINI_MODEL_AUTO,
     title: 'Auto (recommended)',
@@ -51,11 +58,45 @@ const MODEL_OPTIONS = [
   },
 ];
 
+function getOpenAIModelOptions() {
+  return OPENAI_MODELS.map((model) => ({
+    value: model,
+    title: model === DEFAULT_OPENAI_MODEL ? `${model} (recommended)` : model,
+    description: `OpenAI - ${model}`,
+    key: model,
+  }));
+}
+
+function getClaudeModelOptions() {
+  return CLAUDE_MODELS.map((model) => ({
+    value: model,
+    title: model === DEFAULT_CLAUDE_MODEL ? `${model} (recommended)` : model,
+    description: `Claude - ${model}`,
+    key: model,
+  }));
+}
+
+function getAllProviderModels() {
+  return [
+    ...GEMINI_MODEL_OPTIONS,
+    ...getOpenAIModelOptions(),
+    ...getClaudeModelOptions(),
+  ];
+}
+
 export function ModelDialog({ onClose }: ModelDialogProps): React.JSX.Element {
   const config = useContext(ConfigContext);
+  const settings = useSettings();
 
   // Determine the Preferred Model (read once when the dialog opens).
   const preferredModel = config?.getModel() || DEFAULT_GEMINI_MODEL_AUTO;
+
+  // Get the current auth provider from the content generator config
+  const currentProvider = config?.getContentGeneratorConfig()?.provider;
+
+  // Check if using custom auth
+  const isCustomAuth =
+    settings.merged.security?.auth?.selectedType === AuthType.CUSTOM_AUTH;
 
   useKeypress(
     (key) => {
@@ -66,23 +107,71 @@ export function ModelDialog({ onClose }: ModelDialogProps): React.JSX.Element {
     { isActive: true },
   );
 
+  // Get model options based on current provider and auth type
+  const modelOptions = useMemo(() => {
+    // If custom auth is enabled, show all models from all providers
+    if (isCustomAuth) {
+      return getAllProviderModels();
+    }
+
+    // Otherwise, show only models for the current provider
+    if (currentProvider === 'openai') {
+      return getOpenAIModelOptions();
+    } else if (currentProvider === 'claude') {
+      return getClaudeModelOptions();
+    } else if (currentProvider === 'gemini') {
+      return GEMINI_MODEL_OPTIONS;
+    }
+    // Default to all models if provider not recognized
+    return getAllProviderModels();
+  }, [currentProvider, isCustomAuth]);
+
   // Calculate the initial index based on the preferred model.
-  const initialIndex = useMemo(
-    () => MODEL_OPTIONS.findIndex((option) => option.value === preferredModel),
-    [preferredModel],
-  );
+  const initialIndex = useMemo(() => {
+    const index = modelOptions.findIndex(
+      (option) => option.value === preferredModel,
+    );
+    return index >= 0 ? index : 0;
+  }, [preferredModel, modelOptions]);
 
   // Handle selection internally (Autonomous Dialog).
   const handleSelect = useCallback(
     (model: string) => {
       if (config) {
+        // If in custom auth mode and model is from a different provider, switch providers
+        if (isCustomAuth) {
+          let targetProvider: 'gemini' | 'openai' | 'claude' =
+            currentProvider || 'gemini';
+
+          if ((GEMINI_MODELS as readonly string[]).includes(model)) {
+            targetProvider = 'gemini';
+          } else if ((OPENAI_MODELS as readonly string[]).includes(model)) {
+            targetProvider = 'openai';
+          } else if ((CLAUDE_MODELS as readonly string[]).includes(model)) {
+            targetProvider = 'claude';
+          }
+
+          // Switch provider in config if needed
+          if (targetProvider !== currentProvider) {
+            const authType =
+              targetProvider === 'openai'
+                ? AuthType.USE_OPENAI
+                : targetProvider === 'claude'
+                  ? AuthType.USE_CLAUDE
+                  : AuthType.USE_GEMINI;
+            config.refreshAuth(authType).catch((err) => {
+              console.error('Failed to switch provider:', err);
+            });
+          }
+        }
+
         config.setModel(model);
         const event = new ModelSlashCommandEvent(model);
         logModelSlashCommand(config, event);
       }
       onClose();
     },
-    [config, onClose],
+    [config, onClose, isCustomAuth, currentProvider],
   );
 
   return (
@@ -96,7 +185,7 @@ export function ModelDialog({ onClose }: ModelDialogProps): React.JSX.Element {
       <Text bold>Select Model</Text>
       <Box marginTop={1}>
         <DescriptiveRadioButtonSelect
-          items={MODEL_OPTIONS}
+          items={modelOptions}
           onSelect={handleSelect}
           initialIndex={initialIndex}
           showNumbers={true}
@@ -104,7 +193,9 @@ export function ModelDialog({ onClose }: ModelDialogProps): React.JSX.Element {
       </Box>
       <Box flexDirection="column">
         <Text color={theme.text.secondary}>
-          {'> To use a specific Gemini model on startup, use the --model flag.'}
+          {currentProvider === 'gemini'
+            ? '> To use a specific Gemini model on startup, use the --model flag.'
+            : `> Using ${currentProvider?.toUpperCase() || 'default'} models`}
         </Text>
       </Box>
       <Box marginTop={1} flexDirection="column">

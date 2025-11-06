@@ -176,6 +176,8 @@ export const AppContainer = (props: AppContainerProps) => {
     null,
   );
 
+  const [isInCustomAuthFlow, setIsInCustomAuthFlow] = useState(false);
+
   const extensionManager = config.getExtensionLoader() as ExtensionManager;
   // We are in the interactive CLI, update how we request consent and settings.
   extensionManager.setRequestConsent((description) =>
@@ -384,6 +386,13 @@ export const AppContainer = (props: AppContainerProps) => {
     onAuthError,
     apiKeyDefaultValue,
     reloadApiKey,
+    currentProvider,
+    setCurrentProvider,
+    saveModelSelection,
+    isSelectingModel,
+    setIsSelectingModel,
+    isSelectingProvider,
+    setIsSelectingProvider,
   } = useAuthCommand(settings, config);
 
   const { proQuotaRequest, handleProQuotaChoice } = useQuotaAndFallback({
@@ -404,6 +413,13 @@ export const AppContainer = (props: AppContainerProps) => {
       if (authType) {
         await clearCachedCredentialFile();
         settings.setValue(scope, 'security.auth.selectedType', authType);
+
+        // For CUSTOM_AUTH, show provider selection first
+        if (authType === AuthType.CUSTOM_AUTH) {
+          setIsInCustomAuthFlow(true);
+          setIsSelectingProvider(true);
+          return;
+        }
 
         try {
           await config.refreshAuth(authType);
@@ -430,7 +446,7 @@ Logging in with Google... Please restart Gemini CLI to continue.
       }
       setAuthState(AuthState.Authenticated);
     },
-    [settings, config, setAuthState, onAuthError],
+    [settings, config, setAuthState, onAuthError, setIsSelectingProvider],
   );
 
   const handleApiKeySubmit = useCallback(
@@ -444,9 +460,40 @@ Logging in with Google... Please restart Gemini CLI to continue.
           return;
         }
 
-        await saveApiKey(apiKey);
-        await reloadApiKey();
-        await config.refreshAuth(AuthType.USE_GEMINI);
+        // Determine the provider and auth type from current selection
+        const selectedAuthType = settings.merged.security?.auth?.selectedType;
+        let provider: 'gemini' | 'openai' | 'claude' = 'gemini';
+        let authType = AuthType.USE_GEMINI;
+
+        if (selectedAuthType === AuthType.USE_OPENAI) {
+          provider = 'openai';
+          authType = AuthType.USE_OPENAI;
+        } else if (selectedAuthType === AuthType.USE_CLAUDE) {
+          provider = 'claude';
+          authType = AuthType.USE_CLAUDE;
+        } else if (selectedAuthType === AuthType.CUSTOM_AUTH) {
+          // For custom auth, use the current provider from state
+          provider = currentProvider;
+          // Use the provider's auth type for verification
+          authType =
+            provider === 'openai'
+              ? AuthType.USE_OPENAI
+              : provider === 'claude'
+                ? AuthType.USE_CLAUDE
+                : AuthType.USE_GEMINI;
+        }
+
+        await saveApiKey(apiKey, provider);
+        await reloadApiKey(provider);
+
+        // If using CUSTOM_AUTH, show model selection dialog instead of immediately authenticating
+        if (selectedAuthType === AuthType.CUSTOM_AUTH) {
+          // Custom auth flow is already set, just show model selection
+          setIsSelectingModel(true);
+          return;
+        }
+
+        await config.refreshAuth(authType);
         setAuthState(AuthState.Authenticated);
       } catch (e) {
         onAuthError(
@@ -454,13 +501,80 @@ Logging in with Google... Please restart Gemini CLI to continue.
         );
       }
     },
-    [setAuthState, onAuthError, reloadApiKey, config],
+    [
+      setAuthState,
+      onAuthError,
+      reloadApiKey,
+      config,
+      currentProvider,
+      settings,
+      setIsSelectingModel,
+    ],
   );
 
   const handleApiKeyCancel = useCallback(() => {
     // Go back to auth method selection
     setAuthState(AuthState.Updating);
   }, [setAuthState]);
+
+  const handleModelSelection = useCallback(
+    async (
+      model: string,
+      selectedProvider?: 'gemini' | 'openai' | 'claude',
+    ) => {
+      try {
+        // Use the provided provider (when switching tabs) or fall back to current provider
+        const providerToUse = selectedProvider || currentProvider;
+        await saveModelSelection(model, providerToUse);
+
+        // Determine auth type based on selected provider
+        const authType =
+          providerToUse === 'openai'
+            ? AuthType.USE_OPENAI
+            : providerToUse === 'claude'
+              ? AuthType.USE_CLAUDE
+              : AuthType.USE_GEMINI;
+
+        await config.refreshAuth(authType);
+        setIsSelectingModel(false);
+        setIsInCustomAuthFlow(false);
+        setAuthState(AuthState.Authenticated);
+      } catch (e) {
+        onAuthError(
+          `Failed to complete authentication: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    },
+    [
+      currentProvider,
+      saveModelSelection,
+      config,
+      setIsSelectingModel,
+      setAuthState,
+      onAuthError,
+    ],
+  );
+
+  const handleModelSelectionCancel = useCallback(() => {
+    setIsSelectingModel(false);
+    setIsInCustomAuthFlow(false);
+    setAuthState(AuthState.AwaitingApiKeyInput);
+  }, [setIsSelectingModel, setAuthState]);
+
+  const handleProviderSelection = useCallback(
+    (provider: 'gemini' | 'openai' | 'claude') => {
+      setCurrentProvider(provider);
+      setIsSelectingProvider(false);
+      setAuthState(AuthState.AwaitingApiKeyInput);
+    },
+    [setCurrentProvider, setIsSelectingProvider, setAuthState],
+  );
+
+  const handleProviderSelectionCancel = useCallback(() => {
+    setIsSelectingProvider(false);
+    setIsInCustomAuthFlow(false);
+    setAuthState(AuthState.Updating);
+  }, [setIsSelectingProvider, setAuthState]);
 
   // Sync user tier from config when authentication changes
   useEffect(() => {
@@ -1242,6 +1356,8 @@ Logging in with Google... Please restart Gemini CLI to continue.
     showIdeRestartPrompt ||
     !!proQuotaRequest ||
     isAuthDialogOpen ||
+    isSelectingModel ||
+    isSelectingProvider ||
     authState === AuthState.AwaitingApiKeyInput;
 
   const pendingHistoryItems = useMemo(
@@ -1260,7 +1376,13 @@ Logging in with Google... Please restart Gemini CLI to continue.
       authError,
       isAuthDialogOpen,
       isAwaitingApiKeyInput: authState === AuthState.AwaitingApiKeyInput,
+      isSelectingModel,
+      isSelectingProvider,
       apiKeyDefaultValue,
+      apiKeyProvider: currentProvider,
+      isCustomAuth:
+        settings.merged.security?.auth?.selectedType === AuthType.CUSTOM_AUTH,
+      isInCustomAuthFlow,
       editorError,
       isEditorDialogOpen,
       showPrivacyNotice,
@@ -1346,6 +1468,8 @@ Logging in with Google... Please restart Gemini CLI to continue.
       editorError,
       isEditorDialogOpen,
       showPrivacyNotice,
+      settings.merged.security?.auth?.selectedType,
+      isInCustomAuthFlow,
       corgiMode,
       debugMessage,
       quittingMessages,
@@ -1420,6 +1544,9 @@ Logging in with Google... Please restart Gemini CLI to continue.
       apiKeyDefaultValue,
       authState,
       copyModeEnabled,
+      currentProvider,
+      isSelectingModel,
+      isSelectingProvider,
     ],
   );
 
@@ -1456,6 +1583,10 @@ Logging in with Google... Please restart Gemini CLI to continue.
       popAllMessages,
       handleApiKeySubmit,
       handleApiKeyCancel,
+      handleModelSelection,
+      handleModelSelectionCancel,
+      handleProviderSelection,
+      handleProviderSelectionCancel,
     }),
     [
       handleThemeSelect,
@@ -1484,6 +1615,10 @@ Logging in with Google... Please restart Gemini CLI to continue.
       popAllMessages,
       handleApiKeySubmit,
       handleApiKeyCancel,
+      handleModelSelection,
+      handleModelSelectionCancel,
+      handleProviderSelection,
+      handleProviderSelectionCancel,
     ],
   );
 
