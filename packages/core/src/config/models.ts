@@ -40,7 +40,7 @@ export const OPENAI_MODELS = [
 // ============================================================================
 // CLAUDE MODELS
 // ============================================================================
-export const DEFAULT_CLAUDE_MODEL = 'claude-3-5-sonnet-20241022';
+export const DEFAULT_CLAUDE_MODEL = 'claude-3-5-haiku-20241022';
 
 export const CLAUDE_MODELS = [
   'claude-3-5-sonnet-20241022',
