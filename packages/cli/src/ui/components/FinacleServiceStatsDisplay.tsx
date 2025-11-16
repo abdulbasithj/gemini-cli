@@ -35,52 +35,106 @@ const StatRow: React.FC<StatRowProps> = ({
     </Box>
     {values.map((value, index) => (
       <Box width={MODEL_COL_WIDTH} key={index}>
-        <Text color={theme.text.primary}>{value}</Text>
+        {typeof value === 'number' ? (
+          <Text color={theme.text.primary}>{value}</Text>
+        ) : (
+          value
+        )}
       </Box>
     ))}
   </Box>
 );
 
 export const FinacleServiceStatsDisplay: React.FC = () => {
-	const serviveHeader = ["Status", "M-Maria", "R-Maria", "C-Maria", "M-Lisrvr", "R-Lisrvr", "C-Lisrvr"];
-	const serviseStat = [
-  "Finlistval",
-  "Coresession",
-  "Genlimo",
-  "TGAM",
-  "Cbc_upi",
-  "Uni_upi",
-] as const;
+  const serviveHeader = [
+    'Status',
+    'M-Maria',
+    'R-Maria',
+    'C-Maria',
+    'M-Lisrvr',
+    'R-Lisrvr',
+    'C-Lisrvr',
+  ];
+  const serviseStat = [
+    'Finlistval',
+    'Coresession',
+    'Genlimo',
+    'TGAM',
+    'Cbc_upi',
+    'Uni_upi',
+  ] as const;
 
-const sdata: Record<
-  (typeof serviseStat)[number],
-  (number | React.ReactElement)[]
-> = {
-  Finlistval: [
-    <Text color={theme.status.success}>✓ </Text>,
-    2, 1, 38, 200, 180, 401
-  ],
-  Coresession: [
-    <Text color={theme.status.success}>✓ </Text>,
-    2, 1, 38, 200, 180, 401
-  ],
-  Genlimo: [
-    <Text color={theme.status.error}>x </Text>,
-    2, 1, 38, 200, 180, 401
-  ],
-  TGAM: [
-    <Text color={theme.status.success}>✓ </Text>,
-    2, 1, 38, 200, 180, 401
-  ],
-  Cbc_upi: [
-    <Text color={theme.status.success}>✓ </Text>,
-    2, 1, 38, 200, 180, 401
-  ],
-  Uni_upi: [
-    <Text color={theme.status.success}>✓ </Text>,
-    2, 1, 38, 200, 180, 401
-  ],
-};
+  const sdata: Record<
+    (typeof serviseStat)[number],
+    Array<number | React.ReactElement>
+  > = {
+    Finlistval: [
+      <Text key="0" color={theme.status.success}>
+        ✓{' '}
+      </Text>,
+      2,
+      1,
+      38,
+      200,
+      180,
+      401,
+    ],
+    Coresession: [
+      <Text key="0" color={theme.status.success}>
+        ✓{' '}
+      </Text>,
+      2,
+      1,
+      38,
+      200,
+      180,
+      401,
+    ],
+    Genlimo: [
+      <Text key="0" color={theme.status.error}>
+        x{' '}
+      </Text>,
+      2,
+      1,
+      38,
+      200,
+      180,
+      401,
+    ],
+    TGAM: [
+      <Text key="0" color={theme.status.success}>
+        ✓{' '}
+      </Text>,
+      2,
+      1,
+      38,
+      200,
+      180,
+      401,
+    ],
+    Cbc_upi: [
+      <Text key="0" color={theme.status.success}>
+        ✓{' '}
+      </Text>,
+      2,
+      1,
+      38,
+      200,
+      180,
+      401,
+    ],
+    Uni_upi: [
+      <Text key="0" color={theme.status.success}>
+        ✓{' '}
+      </Text>,
+      2,
+      1,
+      38,
+      200,
+      180,
+      401,
+    ],
+  };
 
   return (
     <Box
@@ -90,11 +144,8 @@ const sdata: Record<
       paddingY={1}
       paddingX={2}
     >
-   	<Box backgroundColor="gray">
-       		<Text bold color={theme.text.accent}>Finacle Backend Service Stats</Text>
-	</Box>	
       <Text bold color={theme.text.accent}>
-        Finacle Backend Service Stats 
+        Finacle Backend Service Stats
       </Text>
       <Box height={1} />
 
@@ -102,7 +153,7 @@ const sdata: Record<
       <Box>
         <Box width={METRIC_COL_WIDTH}>
           <Text bold color={theme.text.primary}>
-            Finacle Service  
+            Finacle Service
           </Text>
         </Box>
         {serviveHeader.map((name) => (
@@ -126,11 +177,10 @@ const sdata: Record<
 
       {/* API Section */}
       {serviseStat.map((sn) => (
-	<StatRow title={sn} values={sdata[sn]} isSection /> 
+        <StatRow key={sn} title={sn} values={sdata[sn]} isSection />
       ))}
       <StatRow title="API" values={[]} isSection />
       <Box height={1} />
-
     </Box>
   );
 };
