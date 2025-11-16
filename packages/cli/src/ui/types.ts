@@ -202,6 +202,9 @@ export type HistoryItemToolsList = HistoryItemBase & {
   tools: ToolDefinition[];
   showDescriptions: boolean;
 };
+export type HistoryItemFinacleServiceStats = HistoryItemBase & {
+  type: 'finacle_service_stats';
+};
 
 // JSON-friendly types for using as a simple data model showing info about an
 // MCP Server.
@@ -261,7 +264,8 @@ export type HistoryItemWithoutId =
   | HistoryItemExtensionsList
   | HistoryItemToolsList
   | HistoryItemMcpStatus
-  | HistoryItemChatList;
+  | HistoryItemChatList
+  | HistoryItemFinacleServiceStats;
 
 export type HistoryItem = HistoryItemWithoutId & { id: number };
 
@@ -283,12 +287,13 @@ export enum MessageType {
   TOOLS_LIST = 'tools_list',
   MCP_STATUS = 'mcp_status',
   CHAT_LIST = 'chat_list',
+  FINACLE_SERVICE_STATS = 'finacle_service_stats',
 }
 
 // Simplified message structure for internal feedback
 export type Message =
   | {
-      type: MessageType.INFO | MessageType.ERROR | MessageType.USER;
+      type: MessageType.INFO | MessageType.ERROR | MessageType.USER | MessageType.FINACLE_SERVICE_STATS;
       content: string; // Renamed from text for clarity in this context
       timestamp: Date;
     }

@@ -24,6 +24,7 @@ import { ModelStatsDisplay } from './ModelStatsDisplay.js';
 import { ToolStatsDisplay } from './ToolStatsDisplay.js';
 import { SessionSummaryDisplay } from './SessionSummaryDisplay.js';
 import { Help } from './Help.js';
+import { FinacleServiceStatsDisplay } from './FinacleServiceStatsDisplay.js';
 import type { SlashCommand } from '../commands/types.js';
 import { ExtensionsList } from './views/ExtensionsList.js';
 import { getMCPServerStatus } from '@google/gemini-cli-core';
@@ -154,6 +155,7 @@ export const HistoryItemDisplay: React.FC<HistoryItemDisplayProps> = ({
       {itemForDisplay.type === 'chat_list' && (
         <ChatList chats={itemForDisplay.chats} />
       )}
+      {itemForDisplay.type === 'finacle_service_stats' && <FinacleServiceStatsDisplay />}
     </Box>
   );
 };
