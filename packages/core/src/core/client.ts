@@ -33,8 +33,6 @@ import type {
 import type { ContentGenerator } from './contentGenerator.js';
 import {
   DEFAULT_GEMINI_FLASH_MODEL,
-  DEFAULT_GEMINI_MODEL,
-  DEFAULT_GEMINI_MODEL_AUTO,
   DEFAULT_THINKING_MODE,
   getEffectiveModel,
 } from '../config/models.js';
@@ -57,14 +55,7 @@ import { debugLogger } from '../utils/debugLogger.js';
 import type { ModelConfigKey } from '../services/modelConfigService.js';
 
 export function isThinkingSupported(model: string) {
-  return model.startsWith('gemini-2.5') || model === DEFAULT_GEMINI_MODEL_AUTO;
-}
-
-export function isThinkingDefault(model: string) {
-  if (model.startsWith('gemini-2.5-flash-lite')) {
-    return false;
-  }
-  return model.startsWith('gemini-2.5') || model === DEFAULT_GEMINI_MODEL_AUTO;
+  return !model.startsWith('gemini-2.0');
 }
 
 const MAX_TURNS = 100;
@@ -409,11 +400,11 @@ export class GeminiClient {
     }
 
     const configModel = this.config.getModel();
-    const model: string =
-      configModel === DEFAULT_GEMINI_MODEL_AUTO
-        ? DEFAULT_GEMINI_MODEL
-        : configModel;
-    return getEffectiveModel(this.config.isInFallbackMode(), model);
+    return getEffectiveModel(
+      this.config.isInFallbackMode(),
+      configModel,
+      this.config.getPreviewFeatures(),
+    );
   }
 
   async *sendMessageStream(
